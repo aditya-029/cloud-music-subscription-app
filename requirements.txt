@@ -1,0 +1,27 @@
+# AWS SDK
+boto3
+botocore
+
+# Backend API
+flask
+flask-cors
+Werkzeug
+gunicorn
+
+# Environment/config management
+python-dotenv
+
+# HTTP requests for downloading artist images
+requests
+
+# Lambda/API Gateway support for Flask-style routing
+awsgi
+
+# Data validation and safer request handling
+pydantic
+
+# Testing and verification
+pytest
+
+# Optional local development helper
+watchdog
