@@ -1,0 +1,208 @@
+/* =========================
+   GLOBAL RESET + BASE
+========================= */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+}
+
+body {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* =========================
+   PAGE LAYOUT HELPERS
+========================= */
+
+.page-center {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card {
+  background: white;
+  border-radius: 14px;
+  padding: 28px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+/* =========================
+   INPUT STYLES
+========================= */
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+  transition: 0.2s;
+  font-size: 14px;
+  color: black;
+}
+
+.input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+.btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn-success {
+  background: #16a34a;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #15803d;
+}
+
+.btn-danger {
+  color: #dc2626;
+  background: transparent;
+}
+
+.btn-danger:hover {
+  text-decoration: underline;
+}
+
+/* =========================
+   LINKS
+========================= */
+
+.link {
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* =========================
+   ERROR / MESSAGES
+========================= */
+
+.error {
+  color: #dc2626;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.success {
+  color: #16a34a;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+/* =========================
+   MAIN PAGE LAYOUT
+========================= */
+
+.main-container {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section {
+  background: white;
+  padding: 16px;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+}
+
+.section h2 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+/* =========================
+   GRID FOR QUERY INPUTS
+========================= */
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+/* =========================
+   SONG CARD UI
+========================= */
+
+.song-card {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: #fafafa;
+  transition: 0.2s;
+}
+
+.song-card:hover {
+  background: #f3f4f6;
+}
+
+.song-meta {
+  font-size: 13px;
+  color: #374151;
+}
+
+.song-action {
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* =========================
+   EMPTY STATE
+========================= */
+
+.empty {
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+  padding: 10px 0;
+}

@@ -15,7 +15,7 @@ python-dotenv
 requests
 
 # Lambda/API Gateway support for Flask-style routing
-awsgi
+awsgi; platform_system != "Windows"
 
 # Data validation and safer request handling
 pydantic
