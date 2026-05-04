@@ -1,127 +1,115 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-export default function Login() {
+import { loginUser } from "../api/apiClient";
+import { saveSession } from "../utils/session";
+import MessageBanner from "../components/MessageBanner";
+
+function LoginPage() {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
+  const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
 
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("error");
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  function handleChange(event) {
+    const { name, value } = event.target;
 
-  // ✅ VALIDATION FUNCTION
-  const validate = () => {
-    const email = form.email.trim();
-    const password = form.password;
+    setFormData((currentData) => ({
+      ...currentData,
+      [name]: value,
+    }));
+  }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  async function handleSubmit(event) {
+    event.preventDefault();
 
-    if (!email || !password) {
-      return "All fields are required";
-    }
+    setMessage("");
 
-    if (!emailRegex.test(email)) {
-      return "Invalid email format";
-    }
-
-    if (password.length < 6) {
-      return "Password must be at least 6 characters";
-    }
-
-    return null;
-  };
-
-  const handleLogin = () => {
-    setError("");
-
-    // 1. run validation
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
+    if (!formData.email.trim() || !formData.password.trim()) {
+      setMessageType("error");
+      setMessage("email or password is invalid");
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem("users")) || [];
+    try {
+      setLoading(true);
 
-    const email = form.email.trim();
-    const password = form.password;
+      const response = await loginUser(
+        formData.email.trim(),
+        formData.password.trim(),
+      );
 
-    // 2. authentication check
-    const user = users.find(
-      (u) => u.email === email && u.password === password
-    );
-
-    if (!user) {
-      setError("email or password is invalid");
-      return;
+      saveSession(response.data);
+      navigate("/main");
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error.message || "email or password is invalid");
+    } finally {
+      setLoading(false);
     }
-
-    // 3. create session
-    localStorage.setItem("session", JSON.stringify(user));
-
-    // 4. redirect
-    navigate("/dashboard");
-  };
+  }
 
   return (
-    <div className="h-screen flex items-center justify-center bg-zinc-950 text-white">
+    <main className="auth-page">
+      <section className="auth-card">
+        <div className="auth-card__header">
+          <span className="app-logo app-logo--large">♪</span>
+          <h1>Cloud Music Subscription App</h1>
+          <p>Log in to search, subscribe, and manage your music library.</p>
+        </div>
 
-      <div className="w-96 bg-zinc-900 p-8 rounded-xl border border-zinc-800">
-
-        <h2 className="text-2xl font-bold mb-6 text-center">
-          Login
-        </h2>
-
-        {/* EMAIL */}
-        <input
-          name="email"
-          value={form.email}
-          onChange={handleChange}
-          className="w-full mb-3 p-2 bg-zinc-800 rounded outline-none focus:ring-2 focus:ring-purple-600"
-          placeholder="Email"
+        <MessageBanner
+          message={message}
+          type={messageType}
+          onClose={() => setMessage("")}
         />
 
-        {/* PASSWORD */}
-        <input
-          name="password"
-          type="password"
-          value={form.password}
-          onChange={handleChange}
-          className="w-full mb-3 p-2 bg-zinc-800 rounded outline-none focus:ring-2 focus:ring-purple-600"
-          placeholder="Password"
-        />
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Email</span>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="s40978850@student.rmit.edu.au"
+              autoComplete="email"
+            />
+          </label>
 
-        {/* ERROR */}
-        {error && (
-          <p className="text-red-400 text-sm mb-3">{error}</p>
-        )}
+          <label className="field">
+            <span>Password</span>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="012345"
+              autoComplete="current-password"
+            />
+          </label>
 
-        {/* BUTTON */}
-        <button
-          onClick={handleLogin}
-          className="w-full bg-purple-600 p-2 rounded hover:bg-purple-700 transition"
-        >
-          Login
-        </button>
-
-        {/* LINK */}
-        <p className="text-sm text-gray-400 mt-4 text-center">
-          New user?{" "}
-          <span
-            onClick={() => navigate("/register")}
-            className="text-purple-400 cursor-pointer"
+          <button
+            type="submit"
+            className="button button--primary button--full"
+            disabled={loading}
           >
-            Register
-          </span>
-        </p>
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
 
-      </div>
-    </div>
+        <p className="auth-card__footer">
+          New user? <Link to="/register">Create an account</Link>
+        </p>
+      </section>
+    </main>
   );
 }
+
+export default LoginPage;

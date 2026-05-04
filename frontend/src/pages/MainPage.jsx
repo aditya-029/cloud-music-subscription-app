@@ -1,149 +1,176 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export default function Main() {
+import {
+  getSubscriptions,
+  removeSubscription,
+  searchSongs,
+  subscribeToSong,
+} from "../api/apiClient";
+import Header from "../components/Header";
+import MessageBanner from "../components/MessageBanner";
+import QueryForm from "../components/QueryForm";
+import ResultsPanel from "../components/ResultsPanel";
+import SubscriptionPanel from "../components/SubscriptionPanel";
+import { clearSession, getSession } from "../utils/session";
+
+function MainPage() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
   const [subscriptions, setSubscriptions] = useState([]);
   const [results, setResults] = useState([]);
 
-  // query fields
-  const [title, setTitle] = useState("");
-  const [year, setYear] = useState("");
-  const [artist, setArtist] = useState("");
-  const [album, setAlbum] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("info");
+
+  const [subscriptionsLoading, setSubscriptionsLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState("");
 
   useEffect(() => {
-    const session = JSON.parse(localStorage.getItem("session"));
-    if (!session) navigate("/");
-    setUser(session);
+    const activeSession = getSession();
 
-    const subs = JSON.parse(localStorage.getItem("subs")) || [];
-    setSubscriptions(subs);
-  }, []);
-
-  const logout = () => {
-    localStorage.removeItem("session");
-    navigate("/");
-  };
-
-  // mock DB songs
-  const songDB = [
-    { title: "Love Story", artist: "Taylor Swift", year: "2008", album: "Fearless" },
-    { title: "Blank Space", artist: "Taylor Swift", year: "2014", album: "1989" },
-    { title: "Margaritaville", artist: "Jimmy Buffett", year: "1977", album: "Changes in Latitudes" }
-  ];
-
-  const handleQuery = () => {
-    if (!title && !year && !artist && !album) {
-      alert("At least one field must be completed");
+    if (!activeSession) {
+      navigate("/");
       return;
     }
 
-    const filtered = songDB.filter((song) => {
-      return (
-        (!title || song.title.includes(title)) &&
-        (!year || song.year === year) &&
-        (!artist || song.artist.includes(artist)) &&
-        (!album || song.album.includes(album))
-      );
-    });
+    setUser(activeSession);
+    loadSubscriptions(activeSession.email);
+  }, [navigate]);
 
-    setResults(filtered);
-  };
+  async function loadSubscriptions(email) {
+    try {
+      setSubscriptionsLoading(true);
 
-  const subscribe = (song) => {
-    const updated = [...subscriptions, song];
-    setSubscriptions(updated);
-    localStorage.setItem("subs", JSON.stringify(updated));
-  };
+      const response = await getSubscriptions(email);
+      setSubscriptions(response.data || []);
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error.message || "Unable to load subscriptions.");
+    } finally {
+      setSubscriptionsLoading(false);
+    }
+  }
 
-  const remove = (index) => {
-    const updated = subscriptions.filter((_, i) => i !== index);
-    setSubscriptions(updated);
-    localStorage.setItem("subs", JSON.stringify(updated));
-  };
+  function handleLogout() {
+    clearSession();
+    navigate("/");
+  }
+
+  async function handleSearch(formData, validationMessage = "") {
+    setMessage("");
+
+    if (validationMessage) {
+      setMessageType("error");
+      setMessage(validationMessage);
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      setHasSearched(true);
+
+      const response = await searchSongs(formData);
+      const songs = response.data || [];
+
+      setResults(songs);
+
+      if (songs.length === 0) {
+        setMessageType("info");
+        setMessage("No result is retrieved. Please query again");
+      }
+    } catch (error) {
+      setResults([]);
+      setMessageType("error");
+      setMessage(error.message || "Unable to retrieve songs.");
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  async function handleSubscribe(song) {
+    if (!user?.email || !song?.song_id) {
+      setMessageType("error");
+      setMessage("Unable to subscribe. Missing user or song details.");
+      return;
+    }
+
+    try {
+      setActionLoadingId(song.song_id);
+      setMessage("");
+
+      await subscribeToSong(user.email, song);
+      await loadSubscriptions(user.email);
+
+      setMessageType("success");
+      setMessage("Song subscribed successfully");
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error.message || "Unable to subscribe to song.");
+    } finally {
+      setActionLoadingId("");
+    }
+  }
+
+  async function handleRemove(song) {
+    if (!user?.email || !song?.song_id) {
+      setMessageType("error");
+      setMessage("Unable to remove. Missing user or song details.");
+      return;
+    }
+
+    try {
+      setActionLoadingId(song.song_id);
+      setMessage("");
+
+      await removeSubscription(user.email, song.song_id);
+      await loadSubscriptions(user.email);
+
+      setMessageType("success");
+      setMessage("Song removed successfully");
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error.message || "Unable to remove subscription.");
+    } finally {
+      setActionLoadingId("");
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-6">
+    <main className="dashboard-page">
+      <Header user={user} onLogout={handleLogout} />
 
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl">
-          Welcome, <span className="text-purple-400">{user?.username}</span>
-        </h1>
+      <div className="dashboard-shell">
+        <MessageBanner
+          message={message}
+          type={messageType}
+          onClose={() => setMessage("")}
+        />
 
-        <button onClick={logout} className="text-red-400">
-          Logout
-        </button>
-      </div>
+        <div className="dashboard-grid">
+          <QueryForm onSearch={handleSearch} loading={searchLoading} />
 
-      {/* SUBSCRIPTION AREA */}
-      <div className="mb-8">
-        <h2 className="text-lg mb-3">Subscriptions</h2>
-
-        {subscriptions.length === 0 ? (
-          <p className="text-gray-500">No subscriptions yet</p>
-        ) : (
-          subscriptions.map((s, i) => (
-            <div key={i} className="bg-zinc-900 p-3 mb-2 rounded flex justify-between">
-              <div>
-                {s.title} - {s.artist}
-              </div>
-              <button
-                onClick={() => remove(i)}
-                className="text-red-400"
-              >
-                Remove
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* QUERY AREA */}
-      <div className="bg-zinc-900 p-4 rounded mb-6">
-        <h2 className="mb-3">Query Music</h2>
-
-        <div className="grid grid-cols-2 gap-3">
-          <input className="p-2 bg-zinc-800 rounded" placeholder="Title" onChange={(e) => setTitle(e.target.value)} />
-          <input className="p-2 bg-zinc-800 rounded" placeholder="Year" onChange={(e) => setYear(e.target.value)} />
-          <input className="p-2 bg-zinc-800 rounded" placeholder="Artist" onChange={(e) => setArtist(e.target.value)} />
-          <input className="p-2 bg-zinc-800 rounded" placeholder="Album" onChange={(e) => setAlbum(e.target.value)} />
+          <SubscriptionPanel
+            subscriptions={subscriptions}
+            loading={subscriptionsLoading}
+            onRemove={handleRemove}
+            actionLoadingId={actionLoadingId}
+          />
         </div>
 
-        <button
-          onClick={handleQuery}
-          className="mt-3 bg-purple-600 px-4 py-2 rounded"
-        >
-          Query
-        </button>
+        <ResultsPanel
+          results={results}
+          hasSearched={hasSearched}
+          loading={searchLoading}
+          onSubscribe={handleSubscribe}
+          actionLoadingId={actionLoadingId}
+        />
       </div>
-
-      {/* RESULTS */}
-      <div>
-        {results.length === 0 ? (
-          <p className="text-gray-500">
-            No result is retrieved. Please query again
-          </p>
-        ) : (
-          results.map((s, i) => (
-            <div key={i} className="bg-zinc-900 p-3 mb-2 rounded flex justify-between">
-              <div>
-                {s.title} - {s.artist}
-              </div>
-              <button
-                onClick={() => subscribe(s)}
-                className="text-purple-400"
-              >
-                Subscribe
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-
-    </div>
+    </main>
   );
 }
+
+export default MainPage;
