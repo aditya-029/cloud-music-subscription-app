@@ -21,9 +21,21 @@ if [ ! -f ".env" ]; then
   exit 1
 fi
 
+export PATH="$HOME/.local/bin:$PATH"
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
 echo ""
 echo "Checking backend health dependencies..."
 python3 -m database.verify_database
+
+echo ""
+echo "Checking Gunicorn executable..."
+if ! command -v gunicorn >/dev/null 2>&1; then
+  echo "Gunicorn command not found. Installing again for current user..."
+  python3 -m pip install --user gunicorn
+fi
+
+gunicorn --version
 
 echo ""
 echo "Stopping any existing Gunicorn process..."
@@ -32,7 +44,11 @@ sudo pkill -f "gunicorn.*backend.app:app" || true
 echo ""
 echo "Starting backend with Gunicorn on port 80..."
 
-sudo python3 -m gunicorn \
+sudo env \
+  PATH="$PATH" \
+  PYTHONPATH="$PYTHONPATH" \
+  HOME="$HOME" \
+  gunicorn \
   --workers 2 \
   --bind 0.0.0.0:80 \
   --timeout 120 \
