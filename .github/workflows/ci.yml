@@ -1,0 +1,84 @@
+name: Cloud Music App CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  frontend-build:
+    name: Frontend Build Check
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build React frontend
+        run: npm run build
+
+  backend-import-check:
+    name: Backend Import Check
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: us-east-1
+      LOGIN_TABLE: login
+      MUSIC_TABLE: music
+      SUBSCRIPTIONS_TABLE: subscriptions
+      MUSIC_TITLE_INDEX: title-index
+      MUSIC_YEAR_ALBUM_INDEX: year-album-index
+      APP_HOST: 0.0.0.0
+      APP_PORT: 5050
+      FLASK_DEBUG: "False"
+      CORS_ORIGINS: "*"
+      S3_BUCKET_NAME: cloud-music-app-s4097885-2026-a2
+      S3_IMAGE_PREFIX: artist-images/
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check backend imports
+        run: |
+          python - <<'PY'
+          import backend.app
+          import backend.config
+          import backend.routes.auth_routes
+          import backend.routes.music_routes
+          import backend.routes.subscription_routes
+          import backend.services.auth_service
+          import backend.services.dynamodb_service
+          import backend.services.music_service
+          import backend.services.s3_service
+          import backend.services.subscription_service
+          print("Backend imports completed successfully.")
+          PY
