@@ -9,6 +9,7 @@
 # AWS / Lab Settings
 # -----------------------------
 export AWS_REGION="us-east-1"
+export AWS_PAGER=""
 
 # -----------------------------
 # Project Names
@@ -77,6 +78,7 @@ echo_config() {
   echo "Cloud Music Deployment Config"
   echo "========================================================="
   echo "AWS_REGION:              $AWS_REGION"
+  echo "AWS_PAGER:               disabled"
   echo "FRONTEND_BUCKET:         $FRONTEND_BUCKET"
   echo "ARTIST_IMAGE_BUCKET:     $ARTIST_IMAGE_BUCKET"
   echo "LOGIN_TABLE:             $LOGIN_TABLE"
