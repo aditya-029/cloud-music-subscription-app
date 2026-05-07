@@ -594,28 +594,3 @@ Before creating the final submission zip, check for unwanted files:
     find . -name "lambda_backend.zip" -type f
     find . -name "lambda_build" -type d
 
-Remove unwanted files before zipping.
-
-The final submission should include source code, deployment scripts,
-report PDF, and group worklog PDF.
-
-# Create README File from Terminal
-
-Run this from your project root:
-
-    cat > README.md <<'EOF'
-    # Cloud Music Subscription App
-
-    Paste the final README Markdown content here.
-
-    EOF
-
-Then check it rendered properly:
-
-    cat README.md
-
-Commit it:
-
-    git add README.md
-    git commit -m "Update README for final deployment demo"
-    git push
