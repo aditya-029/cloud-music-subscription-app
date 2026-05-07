@@ -65,11 +65,13 @@ aws ecr get-login-password --region "$AWS_REGION" | \
   docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
 echo ""
-echo "Step 6: Building Docker image..."
+echo "Step 6: Building Docker image for ECS Fargate linux/amd64..."
 
-docker build \
+docker buildx build \
+  --platform linux/amd64 \
   -f deployments/ecs/Dockerfile \
   -t "$ECR_REPOSITORY_NAME:latest" \
+  --load \
   .
 
 echo ""
@@ -157,10 +159,47 @@ if [ "$SECURITY_GROUP_ID" = "None" ] || [ -z "$SECURITY_GROUP_ID" ]; then
   echo "Added inbound HTTP port 80 rule."
 else
   echo "Security group already exists: $SECURITY_GROUP_ID"
+
+  echo "Checking HTTP port 80 ingress rule..."
+  if aws ec2 describe-security-groups \
+    --group-ids "$SECURITY_GROUP_ID" \
+    --region "$AWS_REGION" \
+    --query "SecurityGroups[0].IpPermissions[?FromPort==\`80\` && ToPort==\`80\`]" \
+    --output text | grep -q "0.0.0.0/0"; then
+    echo "HTTP port 80 ingress already exists."
+  else
+    aws ec2 authorize-security-group-ingress \
+      --group-id "$SECURITY_GROUP_ID" \
+      --protocol tcp \
+      --port 80 \
+      --cidr 0.0.0.0/0 \
+      --region "$AWS_REGION" > /dev/null || true
+
+    echo "Added inbound HTTP port 80 rule."
+  fi
 fi
 
 echo ""
-echo "Step 11: Registering ECS task definition..."
+echo "Step 11: Creating CloudWatch log group if needed..."
+
+LOG_GROUP="/ecs/cloud-music-backend"
+
+if aws logs describe-log-groups \
+  --log-group-name-prefix "$LOG_GROUP" \
+  --region "$AWS_REGION" \
+  --query "logGroups[?logGroupName=='$LOG_GROUP'].logGroupName" \
+  --output text | grep -q "$LOG_GROUP"; then
+  echo "CloudWatch log group already exists: $LOG_GROUP"
+else
+  aws logs create-log-group \
+    --log-group-name "$LOG_GROUP" \
+    --region "$AWS_REGION" || true
+
+  echo "Created CloudWatch log group: $LOG_GROUP"
+fi
+
+echo ""
+echo "Step 12: Registering ECS task definition..."
 
 cat > /tmp/cloud-music-task-definition.json <<EOF
 {
@@ -169,6 +208,10 @@ cat > /tmp/cloud-music-task-definition.json <<EOF
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
   "memory": "512",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
   "taskRoleArn": "$LAB_ROLE_ARN",
   "executionRoleArn": "$LAB_ROLE_ARN",
   "containerDefinitions": [
@@ -196,7 +239,15 @@ cat > /tmp/cloud-music-task-definition.json <<EOF
         { "name": "CORS_ORIGINS", "value": "*" },
         { "name": "S3_BUCKET_NAME", "value": "$ARTIST_IMAGE_BUCKET" },
         { "name": "S3_IMAGE_PREFIX", "value": "$S3_IMAGE_PREFIX" }
-      ]
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "$LOG_GROUP",
+          "awslogs-region": "$AWS_REGION",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
     }
   ]
 }
@@ -212,7 +263,7 @@ echo "Registered task definition:"
 echo "$TASK_DEFINITION_ARN"
 
 echo ""
-echo "Step 12: Creating or updating ECS service..."
+echo "Step 13: Creating or updating ECS service..."
 
 SERVICE_EXISTS="$(aws ecs describe-services \
   --cluster "$ECS_CLUSTER_NAME" \
@@ -247,7 +298,7 @@ else
 fi
 
 echo ""
-echo "Step 13: Waiting for ECS service to become stable..."
+echo "Step 14: Waiting for ECS service to become stable..."
 aws ecs wait services-stable \
   --cluster "$ECS_CLUSTER_NAME" \
   --services "$ECS_SERVICE_NAME" \
@@ -256,7 +307,7 @@ aws ecs wait services-stable \
 echo "ECS service is stable."
 
 echo ""
-echo "Step 14: Finding running ECS task public IP..."
+echo "Step 15: Finding running ECS task public IP..."
 
 TASK_ARN="$(aws ecs list-tasks \
   --cluster "$ECS_CLUSTER_NAME" \
@@ -268,6 +319,37 @@ TASK_ARN="$(aws ecs list-tasks \
 
 if [ "$TASK_ARN" = "None" ] || [ -z "$TASK_ARN" ]; then
   echo "ERROR: No running ECS task found."
+  echo ""
+  echo "Recent ECS service events:"
+  aws ecs describe-services \
+    --cluster "$ECS_CLUSTER_NAME" \
+    --services "$ECS_SERVICE_NAME" \
+    --region "$AWS_REGION" \
+    --query "services[0].events[0:8].message" \
+    --output table
+
+  echo ""
+  echo "Recent stopped task:"
+  STOPPED_TASK_ARN="$(aws ecs list-tasks \
+    --cluster "$ECS_CLUSTER_NAME" \
+    --service-name "$ECS_SERVICE_NAME" \
+    --desired-status STOPPED \
+    --region "$AWS_REGION" \
+    --query "taskArns[0]" \
+    --output text)"
+
+  if [ "$STOPPED_TASK_ARN" != "None" ] && [ -n "$STOPPED_TASK_ARN" ]; then
+    aws ecs describe-tasks \
+      --cluster "$ECS_CLUSTER_NAME" \
+      --tasks "$STOPPED_TASK_ARN" \
+      --region "$AWS_REGION" \
+      --query "tasks[0].{lastStatus:lastStatus,stoppedReason:stoppedReason,stopCode:stopCode,containers:containers[*].{name:name,lastStatus:lastStatus,exitCode:exitCode,reason:reason}}" \
+      --output json
+  fi
+
+  echo ""
+  echo "Check CloudWatch logs:"
+  echo "Log group: $LOG_GROUP"
   exit 1
 fi
 
@@ -285,6 +367,21 @@ PUBLIC_IP="$(aws ec2 describe-network-interfaces \
   --output text)"
 
 echo ""
+echo "Step 16: Testing ECS backend health endpoint..."
+
+sleep 10
+
+if curl -fsS "http://$PUBLIC_IP/health" > /tmp/cloud-music-ecs-health.json; then
+  echo "ECS backend health check passed."
+  cat /tmp/cloud-music-ecs-health.json
+  echo ""
+else
+  echo "WARNING: ECS task is running but health endpoint is not reachable yet."
+  echo "Try manually:"
+  echo "curl -v http://$PUBLIC_IP/health"
+fi
+
+echo ""
 echo "========================================================="
 echo "ECS backend deployment complete."
 echo "ECR image:"
@@ -295,4 +392,7 @@ echo "$PUBLIC_IP"
 echo ""
 echo "Health check:"
 echo "http://$PUBLIC_IP/health"
+echo ""
+echo "CloudWatch logs:"
+echo "$LOG_GROUP"
 echo "========================================================="
