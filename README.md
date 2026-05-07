@@ -1,375 +1,621 @@
-# Cloud Music Subscription App
+# Project Overview
 
-## 1. Project Overview
+Cloud Music Subscription App is an AWS-based online music subscription
+web application developed for Cloud Computing Assignment 2. The app
+allows users to register, log in, search for songs, subscribe to songs,
+remove subscriptions, and view artist images stored in Amazon S3.
 
-This project is an AWS-based online music subscription web application developed for Cloud Computing Assignment 2. The application allows users to register, log in, search for music, subscribe to songs, remove subscriptions, and display artist images stored in Amazon S3.
+The project demonstrates the same application deployed using multiple
+AWS backend architectures:
 
-The project currently includes the completed data layer, S3 image pipeline, and local Flask backend API. The remaining work includes frontend development and deployment across EC2, ECS, and API Gateway + Lambda.
+- Frontend hosted using Amazon S3 static website hosting
 
-## 2. Current Implementation Status
+- Backend deployed on EC2
 
-Completed so far:
+- Backend deployed on ECS/Fargate
 
-- Analysed the `2026a2_songs.json` dataset.
-- Created DynamoDB tables for users, music records, and subscriptions.
-- Imported 10 default login users.
-- Imported all 137 music records without overwriting duplicate song titles.
-- Created a purposefully designed `music` table with one GSI and one LSI.
-- Uploaded 71 unique artist images to Amazon S3.
-- Updated DynamoDB music records with S3 image keys.
-- Built a modular Flask backend API.
-- Implemented login, register, music search, subscribe, remove, and health-check endpoints.
-- Added presigned S3 image URLs for secure frontend image display.
+- Backend deployed using API Gateway and Lambda
 
-## 3. Technology Stack
+- Application data stored in DynamoDB
+
+- Artist images stored in S3
+
+For the final demo, the frontend can be connected to any deployed
+backend by rebuilding it with the required backend URL.
+
+# Technology Stack
+
+## Frontend
+
+- React JS
+
+- Vite
+
+- Axios
+
+- Tailwind CSS
+
+- Amazon S3 static website hosting
+
+## Backend
 
 - Python
+
 - Flask
+
+- Gunicorn
+
 - Boto3
+
+- Native AWS Lambda router
+
+## AWS Services
+
 - Amazon DynamoDB
+
 - Amazon S3
-- AWS CLI
-- Python dotenv
-- Gunicorn for later EC2/ECS deployment
 
-## 4. Project Structure
+- Amazon EC2
 
-```text
+- Amazon ECS/Fargate
+
+- Amazon ECR
+
+- AWS Lambda
+
+- Amazon API Gateway
+
+- Amazon CloudWatch
+
+# Project Structure
+
+```{style="textstyle"}
 cloud-music-subscription-app/
-│
-├── data/
-│   └── 2026a2_songs.json
-│
-├── database/
-│   ├── analyse_dataset.py
-│   ├── create_login_table.py
-│   ├── create_music_table.py
-│   ├── create_subscriptions_table.py
-│   ├── db_config.py
-│   ├── import_login_users.py
-│   ├── import_music_data.py
-│   └── verify_database.py
-│
-├── s3/
-│   └── upload_artist_images.py
-│
-├── backend/
-│   ├── app.py
-│   ├── config.py
-│   ├── routes/
-│   │   ├── auth_routes.py
-│   │   ├── music_routes.py
-│   │   └── subscription_routes.py
-│   ├── services/
-│   │   ├── auth_service.py
-│   │   ├── dynamodb_service.py
-│   │   ├── music_service.py
-│   │   ├── s3_service.py
-│   │   └── subscription_service.py
-│   └── utils/
-│       └── response.py
-│
-├── deployments/
-├── docs/
-├── requirements.txt
-├── env.example
-├── .gitignore
-└── README.md
-## 5. Environment Setup
-
-Install project dependencies:
-
-```bash
-pip install -r requirements.txt
+|
+|-- backend/
+|   |-- app.py
+|   |-- config.py
+|   |-- routes/
+|   |-- services/
+|   |-- utils/
+|
+|-- data/
+|   |-- 2026a2_songs.json
+|
+|-- database/
+|   |-- analyse_dataset.py
+|   |-- create_login_table.py
+|   |-- create_music_table.py
+|   |-- create_subscriptions_table.py
+|   |-- import_login_users.py
+|   |-- import_music_data.py
+|   |-- verify_database.py
+|   |-- db_config.py
+|
+|-- deployments/
+|   |-- ec2/
+|   |   |-- setup_ec2.sh
+|   |   |-- run_backend.sh
+|   |-- ecs/
+|   |   |-- Dockerfile
+|   |-- lambda/
+|       |-- lambda_function.py
+|
+|-- docs/
+|
+|-- frontend/
+|   |-- src/
+|   |-- public/
+|   |-- package.json
+|   |-- vite.config.js
+|
+|-- s3/
+|   |-- upload_artist_images.py
+|
+|-- scripts/
+|   |-- config.sh
+|   |-- deploy_frontend_s3.sh
+|   |-- deploy_backend_ecs.sh
+|   |-- package_lambda.sh
+|   |-- deploy_lambda.sh
+|   |-- deploy_api_gateway.sh
+|
+|-- requirements.txt
+|-- env.example
+|-- .gitignore
+|-- .dockerignore
+|-- README.md
 ```
 
-Create the local environment file:
+# How the Application Works
 
-```bash
-cp env.example .env
-```
+The React frontend provides the user interface for login, registration,
+music search, subscriptions, and logout.
 
-Example `.env` values:
+The backend provides API endpoints for authentication, music retrieval,
+subscription management, and artist image URL generation.
 
-```env
-AWS_REGION=us-east-1
-LOGIN_TABLE=login
-MUSIC_TABLE=music
-SUBSCRIPTIONS_TABLE=subscriptions
-MUSIC_TITLE_INDEX=title-index
-MUSIC_YEAR_ALBUM_INDEX=year-album-index
-APP_HOST=0.0.0.0
-APP_PORT=5050
-FLASK_DEBUG=True
-CORS_ORIGINS=*
-S3_BUCKET_NAME=cloud-music-app-s4097885-2026-a2
-S3_IMAGE_PREFIX=artist-images/
-```
+DynamoDB stores users, music records, and subscriptions. S3 stores
+artist images. The backend generates image URLs and returns them to the
+frontend so artist images can be displayed in the app.
 
-Do not commit `.env` to GitHub.
+The same core backend logic is deployed in three ways:
 
-## 6. AWS Credentials
+1.  EC2 backend using Flask and Gunicorn
 
-AWS Academy credentials must be configured locally before running AWS-related scripts.
+2.  ECS/Fargate backend using a Docker container
+
+3.  API Gateway and Lambda backend using a native Lambda router
+
+# AWS Credentials Setup
+
+Before running any AWS setup or deployment scripts, configure AWS
+Academy credentials locally.
+
+Update the following file:
+
+    ~/.aws/credentials
+
+Example format:
+
+    [default]
+    aws_access_key_id=YOUR_ACCESS_KEY
+    aws_secret_access_key=YOUR_SECRET_KEY
+    aws_session_token=YOUR_SESSION_TOKEN
+
+Set the AWS region and disable CLI paging:
+
+    aws configure set region us-east-1
+    aws configure set output json
+    aws configure set cli_pager ""
+    export AWS_PAGER=""
 
 Check AWS access:
 
-```bash
-aws sts get-caller-identity
-```
+    aws sts get-caller-identity
 
 Check DynamoDB access:
 
-```bash
-aws dynamodb list-tables --region us-east-1
-```
+    aws dynamodb list-tables --region us-east-1
 
-If an `ExpiredTokenException` occurs, refresh the AWS Academy CLI credentials and update `~/.aws/credentials`.
+If an `ExpiredTokenException` occurs, refresh the AWS Academy Learner
+Lab credentials and update `~/.aws/credentials`.
 
-The credentials file should contain:
+# Local Backend Environment Setup
 
-```ini
-[default]
-aws_access_key_id=YOUR_ACCESS_KEY
-aws_secret_access_key=YOUR_SECRET_KEY
-aws_session_token=YOUR_SESSION_TOKEN
-```
+Install Python dependencies:
 
-The AWS config file should contain:
+    pip install -r requirements.txt
 
-```ini
-[default]
-region=us-east-1
-output=json
-```
+Create a local `.env` file:
 
-## 7. DynamoDB Design
+    cp env.example .env
 
-### `login` table
+Example `.env` values:
 
-Stores user login records.
+    AWS_REGION=us-east-1
+    LOGIN_TABLE=login
+    MUSIC_TABLE=music
+    SUBSCRIPTIONS_TABLE=subscriptions
+    MUSIC_TITLE_INDEX=title-index
+    MUSIC_YEAR_ALBUM_INDEX=year-album-index
+    APP_HOST=0.0.0.0
+    APP_PORT=5050
+    FLASK_DEBUG=True
+    CORS_ORIGINS=*
+    S3_BUCKET_NAME=cloud-music-app-s4097885-2026-a2
+    S3_IMAGE_PREFIX=artist-images/
 
-```text
-Partition key: email
-```
+Do not commit `.env`.
 
-### `music` table
+# DynamoDB Setup
 
-Stores all music records from the dataset.
-
-```text
-Partition key: artist
-Sort key: title_year_album
-```
-
-Indexes:
-
-```text
-GSI: title-index
-LSI: year-album-index
-```
-
-This design prevents data loss because song titles are not unique in the dataset. The combination of `title`, `artist`, `year`, and `album` is used to generate a stable `song_id`.
-
-### `subscriptions` table
-
-Stores user subscriptions.
-
-```text
-Partition key: email
-Sort key: song_id
-```
-
-## 8. Running the Data Setup
-
-Run the following commands from the project root.
+Run these commands from the project root.
 
 Analyse the dataset:
 
-```bash
-python -m database.analyse_dataset
-```
+    python -m database.analyse_dataset
 
 Create DynamoDB tables:
 
-```bash
-python -m database.create_login_table
-python -m database.create_music_table
-python -m database.create_subscriptions_table
-```
+    python -m database.create_login_table
+    python -m database.create_music_table
+    python -m database.create_subscriptions_table
 
 Import default login users:
 
-```bash
-python -m database.import_login_users
-```
+    python -m database.import_login_users
 
 Import music records:
 
-```bash
-python -m database.import_music_data
-```
+    python -m database.import_music_data
 
-Verify database setup:
+Verify the database setup:
 
-```bash
-python -m database.verify_database
-```
+    python -m database.verify_database
 
-The verification script checks that:
+The verification script checks the login, music, and subscriptions
+tables. It also confirms that the GSI, LSI, Query, and controlled Scan
+operations are working.
 
-- the `login` table exists,
-- the `music` table contains 137 records,
-- the `subscriptions` table exists,
-- artist queries work,
-- title-index GSI queries work,
-- year-album LSI queries work,
-- controlled scan operations work.
-
-## 9. S3 Artist Image Setup
+# S3 Artist Image Setup
 
 Upload artist images to S3 and update DynamoDB records:
 
-```bash
-python -m s3.upload_artist_images
-```
+    python -m s3.upload_artist_images
 
-This script:
+This uploads artist images under:
 
-- finds 71 unique artist image URLs,
-- creates the S3 bucket if required,
-- uploads images under `artist-images/`,
-- updates each music record with its `s3_image_key`.
+    artist-images/
 
-Test presigned image URL generation:
+in the artist image bucket and updates music records with
+`s3_image_key`.
 
-```bash
-python - <<'PY'
-from backend.services.s3_service import generate_presigned_image_url
-print(generate_presigned_image_url("artist-images/TaylorSwift.jpg"))
-PY
-```
-
-## 10. Running the Backend Locally
+# Run Backend Locally
 
 Start the Flask backend:
 
-```bash
-APP_PORT=5050 python -m backend.app
-```
+    APP_PORT=5050 python -m backend.app
 
-Test the health endpoint:
+Test health:
 
-```bash
-curl http://127.0.0.1:5050/health
-```
+    curl http://127.0.0.1:5050/health
 
 Test login:
 
-```bash
-curl -X POST http://127.0.0.1:5050/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"s40978850@student.rmit.edu.au","password":"012345"}'
-```
+    curl -X POST http://127.0.0.1:5050/login \
+      -H "Content-Type: application/json" \
+      -d '{"email":"s40978850@student.rmit.edu.au","password":"012345"}'
 
 Test music search:
 
-```bash
-curl "http://127.0.0.1:5050/songs?artist=Taylor%20Swift&album=Fearless"
-```
+    curl "http://127.0.0.1:5050/songs?artist=Taylor%20Swift&album=Fearless"
+
+# Run Frontend Locally
+
+Go to the frontend folder:
+
+    cd frontend
+    npm install
+
+Create a frontend `.env` file if required:
+
+    cp .env.example .env
+
+For local backend testing, set:
+
+    VITE_API_BASE_URL=http://127.0.0.1:5050
+
+Run the frontend:
+
+    npm run dev
+
+Open the local Vite URL printed in the terminal.
+
+# Deploy Frontend to S3
+
+From the project root:
+
+    ./scripts/deploy_frontend_s3.sh
+
+To deploy the frontend against a specific backend URL:
+
+    VITE_API_BASE_URL=http://BACKEND_URL ./scripts/deploy_frontend_s3.sh
+
+For API Gateway backend:
+
+    VITE_API_BASE_URL=https://API_GATEWAY_URL ./scripts/deploy_frontend_s3.sh
+
+Frontend S3 website URL:
+
+    http://cloud-music-frontend-s4097885-2026-a2.s3-website-us-east-1.amazonaws.com
+
+For demo testing, open the S3 website, log in, search songs, subscribe,
+remove a subscription, and logout.
+
+# Deploy Backend on EC2
+
+## EC2 Console Setup
+
+Launch an EC2 instance with:
+
+- Region: `us-east-1`
+
+- AMI: Amazon Linux 2023
+
+- Instance type: `t2.micro` or `t3.micro`
+
+- Key pair: `vockey`
+
+- IAM instance profile: `LabInstanceProfile`
+
+- Inbound rule: HTTP TCP 80 from `0.0.0.0/0`
+
+- Inbound rule: SSH TCP 22 from My IP
+
+SSH into EC2:
+
+    ssh -i labsuser.pem ec2-user@EC2_PUBLIC_IP
+
+Clone the repository:
+
+    git clone https://github.com/YOUR_USERNAME/cloud-music-subscription-app.git
+    cd cloud-music-subscription-app
+
+Run EC2 setup:
+
+    chmod +x deployments/ec2/setup_ec2.sh
+    ./deployments/ec2/setup_ec2.sh
+
+Start the EC2 backend:
+
+    chmod +x deployments/ec2/run_backend.sh
+    ./deployments/ec2/run_backend.sh
+
+Test from your local machine:
+
+    curl http://EC2_PUBLIC_IP/health
+
+To connect the S3 frontend to EC2:
+
+    VITE_API_BASE_URL=http://EC2_PUBLIC_IP ./scripts/deploy_frontend_s3.sh
+
+# Deploy Backend on ECS/Fargate
+
+Make sure Docker Desktop is running.
+
+From the project root:
+
+    ./scripts/deploy_backend_ecs.sh
+
+The script will:
+
+- Build the backend Docker image
+
+- Push it to Amazon ECR
+
+- Create or update the ECS cluster
+
+- Register a Fargate task definition
+
+- Create or update the ECS service
+
+- Print the ECS task public IP
+
+Test the ECS backend:
+
+    curl http://ECS_PUBLIC_IP/health
+
+To connect the S3 frontend to ECS:
+
+    VITE_API_BASE_URL=http://ECS_PUBLIC_IP ./scripts/deploy_frontend_s3.sh
+
+# Deploy Backend Using Lambda and API Gateway
+
+Deploy Lambda:
+
+    ./scripts/deploy_lambda.sh
+
+Deploy API Gateway:
+
+    ./scripts/deploy_api_gateway.sh
+
+The API Gateway script prints the API endpoint.
+
+Test API Gateway health:
+
+    curl https://API_GATEWAY_URL/health
+
+Test login:
+
+    curl -X POST https://API_GATEWAY_URL/login \
+      -H "Content-Type: application/json" \
+      -d '{"email":"s40978850@student.rmit.edu.au","password":"012345"}'
+
+Test search:
+
+    curl "https://API_GATEWAY_URL/songs?artist=Taylor%20Swift&album=Fearless"
 
 Test subscriptions:
 
-```bash
-curl "http://127.0.0.1:5050/subscriptions?email=s40978850@student.rmit.edu.au"
-```
+    curl "https://API_GATEWAY_URL/subscriptions?email=s40978850@student.rmit.edu.au"
 
-## 11. Current Backend API Routes
+To connect the S3 frontend to API Gateway:
 
-```text
-GET    /health
-POST   /login
-POST   /register
-GET    /songs
-GET    /subscriptions
-POST   /subscriptions
-DELETE /subscriptions/<email>/<song_id>
-```
+    VITE_API_BASE_URL=https://API_GATEWAY_URL ./scripts/deploy_frontend_s3.sh
 
-## 12. Git and Security Notes
+# Backend API Routes
+
+The backend supports:
+
+    GET    /health
+    POST   /login
+    POST   /register
+    GET    /songs
+    GET    /subscriptions
+    POST   /subscriptions
+    DELETE /subscriptions/<email>/<song_id>
+
+Example song search:
+
+    curl "https://API_GATEWAY_URL/songs?artist=Taylor%20Swift&album=Fearless"
+
+Example subscriptions request:
+
+    curl "https://API_GATEWAY_URL/subscriptions?email=s40978850@student.rmit.edu.au"
+
+# Demo Checklist
+
+Before the demo, verify:
+
+1.  AWS credentials are active.
+
+2.  DynamoDB tables exist: `login`, `music`, `subscriptions`.
+
+3.  S3 artist image bucket exists.
+
+4.  S3 frontend URL loads.
+
+5.  EC2 backend `/health` works.
+
+6.  ECS backend `/health` works.
+
+7.  API Gateway `/health` works.
+
+8.  Frontend is deployed using the backend URL selected for the demo.
+
+9.  Login works from the frontend.
+
+10. Search returns songs with artist images.
+
+11. Subscribe adds a song.
+
+12. Remove deletes a subscription.
+
+13. Logout returns to the login page.
+
+Recommended final demo backend:
+
+    API Gateway + Lambda
+
+This clearly demonstrates the serverless deployment requirement.
+
+# Useful Demo Search Values
+
+Use these values during the demo:
+
+    Artist: Taylor Swift
+    Album: Fearless
+
+    Artist: Jimmy Buffett
+    Year: 1974
+
+    Title: Bad Blood
+    Artist: Taylor Swift
+
+# Git and Security Notes
 
 Do not commit:
 
-```text
-.env
-tmp_artist_images/
-virtual environments
-__pycache__/
-AWS credentials
-temporary zip/build files
-```
+- `.env`
+
+- `frontend/.env`
+
+- `frontend/node_modules/`
+
+- `frontend/dist/`
+
+- `lambda_build/`
+
+- `lambda_backend.zip`
+
+- `tmp_artist_images/`
+
+- `__pycache__/`
+
+- `.DS_Store`
+
+- `*.pem`
+
+- AWS credentials
 
 Commit:
 
-```text
-README.md
-requirements.txt
-env.example
-.gitignore
-data/
-database/
-backend/
-s3/
-docs/
-deployments/
-```
+- `README.md`
 
-## 13. Cost-Safe AWS Usage Notes
+- `requirements.txt`
 
-This project uses a cost-conscious AWS setup suitable for AWS Academy credit limits.
+- `env.example`
 
-Current cost-safe decisions:
+- `.gitignore`
 
-- DynamoDB tables use `PAY_PER_REQUEST` billing.
-- The dataset contains only 137 music records.
-- Only 71 small artist images are uploaded to S3.
-- No EC2 or ECS resources have been launched yet.
-- Presigned S3 URLs are used instead of making the image bucket fully public.
+- `.dockerignore`
 
-Team rules:
+- `backend/`
+
+- `database/`
+
+- `data/`
+
+- `s3/`
+
+- `frontend/src/`
+
+- `deployments/`
+
+- `scripts/`
+
+- `docs/`
+
+# Cost-Safe AWS Usage
+
+To avoid unnecessary AWS Academy credit usage:
+
+- Stop EC2 after testing.
+
+- Delete or scale down ECS service if not needed.
 
 - Do not create large EC2 instances.
-- Do not leave EC2 or ECS resources running overnight.
-- Stop or delete unused compute resources after testing.
-- Avoid creating duplicate S3 buckets across multiple group accounts.
-- Check AWS Academy credit usage regularly.
 
-## 14. Remaining Work
+- Do not leave compute resources running overnight.
 
-The remaining project tasks are:
+- Refresh AWS Academy credentials when `ExpiredTokenException` occurs.
 
-1. Build frontend pages for login, registration, search, subscriptions, and logout.
-2. Connect the frontend to the local Flask backend.
-3. Deploy the frontend to S3 static hosting.
-4. Deploy the backend independently on EC2.
-5. Deploy the backend independently on ECS.
-6. Deploy the backend using API Gateway + Lambda.
-7. Prepare the final report, architecture diagrams, group worklog, and demo checklist.
+- Use `us-east-1` consistently.
 
-## 15. Current Demo-Ready Features
+Stop EC2 from the AWS Console when not testing:
 
-The following features are currently working through the local backend API:
+    EC2 -> Instances -> select instance -> Instance state -> Stop instance
 
-- login with existing users,
-- invalid login rejection,
-- new user registration,
-- music search by artist, title, year, and album,
-- AND-based query filtering,
-- DynamoDB GSI title search,
-- DynamoDB LSI artist-year search,
-- subscription creation,
-- subscription retrieval,
-- subscription deletion,
-- S3 presigned image URL generation.
+Scale down ECS if needed:
 
-The frontend is the next major development task.
+    aws ecs update-service \
+      --cluster cloud-music-cluster \
+      --service cloud-music-backend-service \
+      --desired-count 0 \
+      --region us-east-1
+
+Restore ECS later:
+
+    aws ecs update-service \
+      --cluster cloud-music-cluster \
+      --service cloud-music-backend-service \
+      --desired-count 1 \
+      --region us-east-1
+
+# Final Submission Cleanup
+
+Before creating the final submission zip, check for unwanted files:
+
+    find . -name "__pycache__" -type d
+    find . -name ".DS_Store" -type f
+    find . -name "node_modules" -type d
+    find . -name ".env" -type f
+    find . -name "lambda_backend.zip" -type f
+    find . -name "lambda_build" -type d
+
+Remove unwanted files before zipping.
+
+The final submission should include source code, deployment scripts,
+report PDF, and group worklog PDF.
+
+# Create README File from Terminal
+
+Run this from your project root:
+
+    cat > README.md <<'EOF'
+    # Cloud Music Subscription App
+
+    Paste the final README Markdown content here.
+
+    EOF
+
+Then check it rendered properly:
+
+    cat README.md
+
+Commit it:
+
+    git add README.md
+    git commit -m "Update README for final deployment demo"
+    git push
