@@ -1,0 +1,61 @@
+# =========================================================
+# Docker Ignore - Cloud Music Subscription App
+# Prevent unnecessary or sensitive files entering Docker builds.
+# =========================================================
+
+# Git
+.git
+.gitignore
+.github
+
+# Environment / secrets
+.env
+.env.*
+frontend/.env
+frontend/.env.*
+**/.env
+**/.env.*
+
+# Python generated files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Node / frontend generated files
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+node_modules/
+dist/
+
+# Temporary image/cache folders
+tmp_artist_images/
+tmp/
+temp/
+
+# OS/editor files
+.DS_Store
+__MACOSX/
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# Local AWS/security files
+.aws/
+*.pem
+*.ppk
+labsuser.pem
